@@ -1,11 +1,16 @@
 import re
+from pathlib import Path
 
 import cv2
 import numpy as np
 import onnxruntime as ort
 import yaml
 
-from helper import get_resource_path
+from helper import get_resource_path, imread
+
+MODEL_DIR: Path = get_resource_path('resources/models/PP-OCRv6_tiny_rec_onnx', as_posix=False)
+MODEL_PATH = MODEL_DIR / 'inference.onnx'
+CONFIG_PATH = MODEL_DIR / 'inference.yml'
 
 # Bounding box offsets (lv template top-left corner as origin)
 LV_OFFSET = (32, 11, 76, 23)
@@ -14,10 +19,6 @@ MP_OFFSET = (347, 2, 433, 14)
 EXP_OFFSET = (464, 2, 562, 14)
 
 TEMPLATE_DIST = 573.0
-
-MODEL_DIR = get_resource_path("resources/models/PP-OCRv6_tiny_rec_onnx")
-MODEL_PATH = MODEL_DIR / "inference.onnx"
-CONFIG_PATH = MODEL_DIR / "inference.yml"
 
 
 class UiOcrExtractor:
@@ -33,6 +34,9 @@ class UiOcrExtractor:
         self._lv_box = (0, 0, 1, 1)
         self._exp_box = (0, 0, 1, 1)
 
+        # Manual calibration
+        self._manual_mode = False
+
         # Skip check: skip inferencing if no change
         self._lv_last_array = None
         self._exp_last_array = None
@@ -44,13 +48,27 @@ class UiOcrExtractor:
     def is_available(self) -> bool:
         return self._scale > 0
 
+    def set_manual_boxes(self, lv_box: tuple, exp_box: tuple) -> None:
+        # Switch into manual calibration mode -----------------------------------------------------
+        self._manual_mode = True
+        self._lv_box = tuple(int(round(v)) for v in lv_box)
+        self._exp_box = tuple(int(round(v)) for v in exp_box)
+
+        # is_available() only checks if (_scale > 0)
+        self._scale = 1.0
+
+        # Delete cached boxes
+        self._lv_last_array = None
+        self._exp_last_array = None
+
+    def clear_manual_boxes(self) -> None:
+        # Return to automatic template-matching detection mode ------------------------------------
+        self._manual_mode = False
+        self._scale = 0
+        self._size = (0, 0)
+
     def _safe_crop(self, box):
-        """
-        Clamp a bounding box to the current screenshot bounds and return the
-        crop, or None if the screenshot / region is not usable. This protects
-        every caller against stale boxes, zero-sized screenshots, or a box
-        that fell outside the frame after a resolution/UI change.
-        """
+        # Returns `None` if the box is invalid ----------------------------------------------------
         screenshot = self._screenshot
         if screenshot is None or screenshot.size == 0:
             return None
@@ -65,7 +83,7 @@ class UiOcrExtractor:
         y1 = max(0, min(int(y1), h))
         y2 = max(0, min(int(y2), h))
 
-        if x2 - x1 <= 0 or y2 - y1 <= 0:
+        if x2 <= x1 or y2 <= y1:
             return None
 
         return screenshot[y1:y2, x1:x2, :3]
@@ -162,10 +180,15 @@ class UiOcrExtractor:
         if screenshot is None or screenshot.size == 0 or screenshot.ndim < 2:
             # Nothing usable in this frame
             self._screenshot = screenshot
-            self._scale = 0
+            if not self._manual_mode:
+                self._scale = 0
             return
 
         self._screenshot = screenshot
+
+        if self._manual_mode:
+            return
+
         size = (screenshot.shape[0], screenshot.shape[1])
 
         size_changed = self._size != size
@@ -227,7 +250,7 @@ class UiOcrExtractor:
     @staticmethod
     def _load_template(path):
         resource_path = get_resource_path(path)
-        template = cv2.imread(resource_path, cv2.IMREAD_GRAYSCALE)
+        template = imread(resource_path, cv2.IMREAD_GRAYSCALE)
         assert template is not None, f"Failed to load template at {resource_path}."
 
         return template.copy()
@@ -237,7 +260,7 @@ class PPOCRv6TinyTextRecognition:
     def __init__(self, model_path, config_path):
         # Load model ------------------------------------------------------------------------------
         self.session = ort.InferenceSession(
-            model_path.as_posix(),
+            model_path,
             providers=["CPUExecutionProvider"],
         )
 

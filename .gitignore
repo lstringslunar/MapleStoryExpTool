@@ -3,6 +3,15 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Project
+/resources/models/PP-OCRv6_tiny_rec_onnx/inference*
+
+# Temp
+_*/
+
+# Pycharm
+.idea/
+
 # C extensions
 *.so
 
