@@ -31,3 +31,12 @@ def get_hwnd(title: str) -> int | None:
     user32 = ctypes.WinDLL('user32', use_last_error=True)
     hwnd = user32.FindWindowW(None, title)
     return hwnd or None
+
+
+def supports_gcb() -> bool:
+    # Returns True if supports GraphicsCaptureSession (WGC) border control ------------------------
+    if sys.platform != "win32":
+        return False
+
+    # GraphicsCaptureSession.IsBorderRequired introduced in Windows 10.0.20348.0
+    return sys.getwindowsversion().build >= 20348
