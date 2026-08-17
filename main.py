@@ -97,8 +97,6 @@ class CaptureWorker:
         self._running = True
         self._capture_control = None
 
-        self._should_draw_border = False if supports_gcb() else None
-
         # Latest raw frame, cached independently of the extractor (which may
         # clear/reuse its own screenshot reference). Used by the calibration
         # dialog. Guarded by a lock since it's written on the capture thread
@@ -137,8 +135,8 @@ class CaptureWorker:
 
                 capture = WindowsCapture(
                     cursor_capture=False,
-                    draw_border=self._should_draw_border,
-                    minimum_update_interval=UPDATE_INTERVAL_MS,
+                    draw_border=False if supports_gcb() else None,
+                    minimum_update_interval=UPDATE_INTERVAL_MS if supports_gcb() else None,
                     window_hwnd=target_hwnd
                 )
 
