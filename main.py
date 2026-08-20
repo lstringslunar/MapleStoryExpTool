@@ -5,6 +5,10 @@ import sys
 import threading
 import time
 
+# Disable High-DPI Scaling ------------------------------------------------------------------------
+os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "0"
+os.environ["QT_SCALE_FACTOR"] = "1"
+
 import numpy as np
 from PySide6.QtCore import QObject, Signal, Slot, Qt, QRect, QPoint, QSize
 from PySide6.QtGui import QPainter, QPixmap, QFontDatabase, QFont, QColor, QGuiApplication, QImage
@@ -13,12 +17,8 @@ from PySide6.QtWidgets import QApplication, QCheckBox, QDialog, QDoubleSpinBox, 
     QGraphicsDropShadowEffect
 from windows_capture import WindowsCapture, Frame, InternalCaptureControl
 
-from helper import get_hwnd, get_resource_path, supports_gcb
+from helper import get_hwnd, get_resource_path, supports_ibr, supports_mui
 from ui_ocr_extractor import UiOcrExtractor
-
-# Disable High-DPI Scaling ------------------------------------------------------------------------
-os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "0"
-os.environ["QT_SCALE_FACTOR"] = "1"
 
 # Default Configurations --------------------------------------------------------------------------
 WINDOW_TITLE = "新楓之谷：經典版"
@@ -135,8 +135,8 @@ class CaptureWorker:
 
                 capture = WindowsCapture(
                     cursor_capture=False,
-                    draw_border=False if supports_gcb() else None,
-                    minimum_update_interval=UPDATE_INTERVAL_MS if supports_gcb() else None,
+                    draw_border=False if supports_ibr() else None,
+                    minimum_update_interval=UPDATE_INTERVAL_MS if supports_mui() else None,
                     window_hwnd=target_hwnd
                 )
 

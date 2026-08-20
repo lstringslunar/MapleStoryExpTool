@@ -33,10 +33,19 @@ def get_hwnd(title: str) -> int | None:
     return hwnd or None
 
 
-def supports_gcb() -> bool:
-    # Returns True if supports GraphicsCaptureSession (WGC) border control ------------------------
+def supports_ibr() -> bool:
+    # Returns True if supports GraphicsCaptureSession.IsBorderRequired ----------------------------
     if sys.platform != "win32":
         return False
 
     # GraphicsCaptureSession.IsBorderRequired introduced in Windows 10.0.20348.0
     return sys.getwindowsversion().build >= 20348
+
+
+def supports_mui() -> bool:
+    # Returns True if supports GraphicsCaptureSession.MinUpdateInterval ---------------------------
+    if sys.platform != "win32":
+        return False
+
+    # GraphicsCaptureSession.MinUpdateInterval introduced in Windows Build 26100
+    return sys.getwindowsversion().build >= 26100
