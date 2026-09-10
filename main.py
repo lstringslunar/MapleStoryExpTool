@@ -97,10 +97,6 @@ class CaptureWorker:
         self._running = True
         self._capture_control = None
 
-        # Latest raw frame, cached independently of the extractor (which may
-        # clear/reuse its own screenshot reference). Used by the calibration
-        # dialog. Guarded by a lock since it's written on the capture thread
-        # and read from the Qt/UI thread.
         self.last_frame = None
         self._last_frame_lock = threading.Lock()
 
@@ -154,8 +150,6 @@ class CaptureWorker:
                         with self._last_frame_lock:
                             self.last_frame = frame.frame_buffer.copy()
 
-                        # UI template not (yet) matched in this frame - report a short,
-                        # stable status instead of falling through to a stale/garbage read.
                         if not self.extractor.is_available():
                             self.signals.status_changed.emit("找不到遊戲介面，偵測中...")
                             return
@@ -181,9 +175,6 @@ class CaptureWorker:
                         else:
                             self.signals.status_changed.emit("等級讀取異常")
                     except Exception as err:
-                        # Log the full detail for debugging, but only ever show a short,
-                        # bounded message in the UI - a raw exception string can be
-                        # arbitrarily long and shouldn't be able to affect the overlay.
                         print(f"[CaptureWorker] Frame processing error: {err}")
                         self.signals.status_changed.emit("處理時發生錯誤")
 
@@ -196,7 +187,6 @@ class CaptureWorker:
 
             except Exception as e:
                 if self._running:
-                    # Full detail to console; short, bounded status to the UI.
                     print(f"[CaptureWorker] Capture error: {e}")
                     self.signals.status_changed.emit("擷取畫面時發生錯誤，重試中...")
 

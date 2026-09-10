@@ -13,18 +13,26 @@ MODEL_PATH = MODEL_DIR / 'inference.onnx'
 CONFIG_PATH = MODEL_DIR / 'inference.yml'
 
 # Bounding box offsets (lv template top-left corner as origin)
-LV_OFFSET = (32, 11, 76, 23)
-HP_OFFSET = (236, 2, 325, 14)
-MP_OFFSET = (347, 2, 433, 14)
-EXP_OFFSET = (464, 2, 562, 14)
 
-TEMPLATE_DIST = 573.0
+# LV_OFFSET = (32, 11, 76, 23)
+# HP_OFFSET = (236, 2, 325, 14)
+# MP_OFFSET = (347, 2, 433, 14)
+# EXP_OFFSET = (464, 2, 562, 14)
+#
+# TEMPLATE_DIST = 573.0
+
+LV_OFFSET = (37, 18, 85, 30)
+EXP_OFFSET = (825, 4, 977, 18)
+
+TEMPLATE_DIST = 992.0
 
 
 class UiOcrExtractor:
     def __init__(self):
-        self._template_a = self._load_template('resources/templates/lv.png')
-        self._template_b = self._load_template('resources/templates/shop.png')
+        # self._template_a = self._load_template('resources/templates/lv.png')
+        # self._template_b = self._load_template('resources/templates/shop.png')
+        self._template_a = self._load_template('resources/templates/lv_v2.png')
+        self._template_b = self._load_template('resources/templates/shop_v2.png')
 
         self._screenshot = np.array([])
         self._size = (0, 0)
@@ -201,7 +209,7 @@ class UiOcrExtractor:
             gray = cv2.cvtColor(screenshot, cv2.COLOR_BGRA2GRAY)
 
             # Try to detect the UI scale by using template matching -------------------------------
-            scales = np.linspace(0.5, 2.0, 30)
+            scales = np.linspace(0.5, 2.0, 60)
 
             best_score_a = 0
             best_score_b = 0
@@ -226,7 +234,7 @@ class UiOcrExtractor:
                     best_score_b = score_b
                     best_pos_b = pos_b
 
-            if best_score_a < 0.8 or best_score_b < 0.8:  # No match found
+            if best_score_a < 0.7 or best_score_b < 0.7:  # No match found
                 self._scale = 0
                 return
 
