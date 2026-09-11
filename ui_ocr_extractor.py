@@ -13,24 +13,15 @@ MODEL_PATH = MODEL_DIR / 'inference.onnx'
 CONFIG_PATH = MODEL_DIR / 'inference.yml'
 
 # Bounding box offsets (lv template top-left corner as origin)
-
-# LV_OFFSET = (32, 11, 76, 23)
-# HP_OFFSET = (236, 2, 325, 14)
-# MP_OFFSET = (347, 2, 433, 14)
-# EXP_OFFSET = (464, 2, 562, 14)
-#
-# TEMPLATE_DIST = 573.0
-
-LV_OFFSET = (37, 18, 85, 30)
-EXP_OFFSET = (825, 4, 977, 18)
+LV_OFFSET = (37, 19, 85, 30)
+EXP_OFFSET = (827, 4, 950, 19)
 
 TEMPLATE_DIST = 992.0
 
+DEBUG = False
 
 class UiOcrExtractor:
     def __init__(self):
-        # self._template_a = self._load_template('resources/templates/lv.png')
-        # self._template_b = self._load_template('resources/templates/shop.png')
         self._template_a = self._load_template('resources/templates/lv_v2.png')
         self._template_b = self._load_template('resources/templates/shop_v2.png')
 
@@ -75,6 +66,26 @@ class UiOcrExtractor:
         self._scale = 0
         self._size = (0, 0)
 
+    def _safe_crop_debug(self, box, filename):
+        screenshot = self._screenshot
+        if screenshot is None or screenshot.size == 0:
+            return
+
+        h, w = screenshot.shape[0], screenshot.shape[1]
+        if h <= 0 or w <= 0:
+            return
+
+        x1, y1, x2, y2 = box
+        x1 = max(0, min(int(x1), w))
+        x2 = max(0, min(int(x2), w))
+        y1 = max(0, min(int(y1), h))
+        y2 = max(0, min(int(y2), h))
+
+        if x2 <= x1 or y2 <= y1:
+            return
+
+        cv2.imwrite(filename, screenshot[y1:y2, x1:x2, :])
+
     def _safe_crop(self, box):
         # Returns `None` if the box is invalid ----------------------------------------------------
         screenshot = self._screenshot
@@ -101,6 +112,8 @@ class UiOcrExtractor:
         if not self.is_available():
             return 0, 0
 
+        if DEBUG:
+            self._safe_crop_debug(self._lv_box, '_debug_lv_box.png')
         img = self._safe_crop(self._lv_box)
         if img is None:
             return 0, 0
@@ -140,6 +153,8 @@ class UiOcrExtractor:
         if not self.is_available():
             return 0, 0
 
+        if DEBUG:
+            self._safe_crop_debug(self._exp_box, '_debug_exp_box.png')
         img = self._safe_crop(self._exp_box)
         if img is None:
             return 0, 0
